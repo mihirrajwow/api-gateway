@@ -1,0 +1,130 @@
+version: "3.9"
+
+services:
+  # ---------------------------------------------------------------------------
+  # FastAPI Application
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: api_gateway_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: development
+      DEBUG: "true"
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/api_gateway
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-key-replace-in-production-32chars
+      JWT_SECRET_KEY: dev-jwt-key-replace-in-production-32chars
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      DEFAULT_RATE_LIMIT: "100"
+      DEFAULT_RATE_LIMIT_WINDOW: "60"
+      LOG_LEVEL: INFO
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - gateway_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: api_gateway_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: api_gateway
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - gateway_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d api_gateway"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Redis 7
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: api_gateway_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - gateway_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # DB migration runner (runs once then exits)
+  # ---------------------------------------------------------------------------
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: api_gateway_migrator
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/api_gateway
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - gateway_net
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # pgAdmin (optional dev UI for Postgres)
+  # ---------------------------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: api_gateway_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - gateway_net
+    profiles:
+      - tools   # only starts with: docker compose --profile tools up
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  gateway_net:
+    driver: bridge
