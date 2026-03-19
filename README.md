@@ -86,7 +86,15 @@ docker compose exec app python scripts/seed.py
 # 5. Open Swagger UI in browser
 Start-Process "http://localhost:8000/docs"
 ```
+Docker containers running:
 ![Docker containers running](screenshots/Screenshot_Docker-containers-running.png)
+
+Seed script output:
+![Seed script output](screenshots/Screenshot_Seed-script-output.png)
+
+Swagger UI: full API surface
+![Swagger UI: full API surface 1](screenshots/Screenshot_Swagger-UI-1.png)
+![Swagger UI: full API surface 2](screenshots/Screenshot_Swagger-UI-2.png)
 
 > **Note:** If you see `the attribute version is obsolete`: this is a harmless Docker Compose v2 warning. Remove the `version:` line from `docker-compose.yml` to silence it.
 
@@ -184,6 +192,9 @@ pong  user_id                               rate_limit_remaining
 ----  -------                               --------------------
 True  78f3abfd-af79-42c4-92d8-7497204d9391  49
 ```
+OUTPUT:
+Gateway ping with rate limit headers
+![Gateway ping with rate limit headers](screenshots/Screenshot_Successful-gateway-ping-with-rate-limit-headers.png)
 
 ### 6. Test the echo endpoint
 
@@ -221,6 +232,9 @@ Expected output: requests 1–50 succeed, 51–55 are rejected:
 [54] 429 RATE LIMITED
 [55] 429 RATE LIMITED
 ```
+OUTPUT:
+![Screenshot Rate limit Enforcement 1](screenshots/Screenshot_Rate-limit-Enforcement-1.png)
+![Screenshot Rate limit Enforcement 2](screenshots/Screenshot_Rate-limit-Enforcement-2.png)
 
 ### 8. View request logs
 
@@ -288,6 +302,8 @@ done
 ```
 
 ---
+Health check output:
+![Health check response](screenshots/Screenshot_Health-check-response.png)
 
 ## Endpoints
 
