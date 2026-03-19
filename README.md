@@ -1,4 +1,4 @@
-# API Gateway — Distributed Rate Limiting with FastAPI
+# API Gateway: Distributed Rate Limiting with FastAPI
 
 A production-grade API Gateway built with **FastAPI**, **PostgreSQL**, **Redis**, and **JWT authentication**. Implements a sliding-window rate limiter using atomic Lua scripts in Redis, with per-user and per-endpoint enforcement.
 
@@ -13,24 +13,24 @@ Client
   │
   ▼
 ┌─────────────────────────────────────────────────────┐
-│                  FastAPI Application                 │
+│                  FastAPI Application                │
 │                                                     │
-│  ┌──────────────────────────────────────────────┐  │
-│  │           GatewayMiddleware                  │  │
-│  │  1. Check route — exempt or protected?       │  │
-│  │  2. Extract & validate X-API-Key header      │  │
-│  │  3. Run sliding-window rate limiter (Redis)  │  │
-│  │  4. Inject X-RateLimit-* response headers    │  │
-│  │  5. Log request to PostgreSQL                │  │
-│  └──────────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────────┐  │
+│  │           GatewayMiddleware                   │  │
+│  │  1. Check route: exempt or protected?         │  │
+│  │  2. Extract & validate X-API-Key header       │  │
+│  │  3. Run sliding-window rate limiter (Redis)   │  │
+│  │  4. Inject X-RateLimit-* response headers     │  │
+│  │  5. Log request to PostgreSQL                 │  │
+│  └───────────────────────────────────────────────┘  │
 │                                                     │
 │  Routes:                                            │
-│    /api/v1/auth/*       ← Public (no auth)         │
-│    /api/v1/users/*      ← JWT bearer token         │
-│    /api/v1/api-keys/*   ← JWT bearer token         │
-│    /api/v1/logs/*       ← JWT bearer token         │
-│    /api/v1/gateway/*    ← X-API-Key + rate limit   │
-│    /health              ← Public                   │
+│    /api/v1/auth/*       ← Public (no auth)          │
+│    /api/v1/users/*      ← JWT bearer token          │
+│    /api/v1/api-keys/*   ← JWT bearer token          │
+│    /api/v1/logs/*       ← JWT bearer token          │
+│    /api/v1/gateway/*    ← X-API-Key + rate limit    │
+│    /health              ← Public                    │
 └─────────────────────────────────────────────────────┘
          │                          │
          ▼                          ▼
@@ -39,32 +39,32 @@ Client
    request_logs)             sorted sets)
 ```
 
-### Auth model — two separate schemes
+### Auth model: two separate schemes
 
 | Route group | Auth header | Issued by |
 |---|---|---|
-| `/api/v1/auth/*` | none | — |
+| `/api/v1/auth/*` | none |: |
 | `/api/v1/users/*`, `/api/v1/api-keys/*`, `/api/v1/logs/*` | `Authorization: Bearer <jwt>` | `/auth/login` |
 | `/api/v1/gateway/*` | `X-API-Key: gw_...` | `/api-keys` endpoint |
 
-> Do **not** mix them — sending a JWT to a gateway route or an API key to a user route will return 401.
+> Do **not** mix them: sending a JWT to a gateway route or an API key to a user route will return 401.
 
-### Rate limiting — sliding window via Redis Lua
+### Rate limiting: sliding window via Redis Lua
 
 Each request against a gateway route is checked with an atomic Lua script operating on a Redis sorted set keyed `rl:{user_id}:{endpoint}`:
 
-1. **Prune** — remove entries older than the window
-2. **Count** — get current usage
-3. **Gate** — if count ≥ limit → 429
-4. **Record** — add entry with `score = now_ms`, set TTL
+1. **Prune**: remove entries older than the window
+2. **Count**: get current usage
+3. **Gate**: if count ≥ limit → 429
+4. **Record**: add entry with `score = now_ms`, set TTL
 
-Single `EVALSHA` call — race-condition-free at any concurrency. Fails open if Redis is unreachable.
+Single `EVALSHA` call: race-condition-free at any concurrency. Fails open if Redis is unreachable.
 
 ---
 
 ## Quick Start
 
-### Option A — Docker (recommended)
+### Option A: Docker (recommended)
 
 No local Python, PostgreSQL, or Redis installation required.
 
@@ -80,16 +80,17 @@ copy .env.example .env
 # 3. Build and start all services
 docker compose up --build
 
-# 4. In a second terminal — seed dev users and API keys
+# 4. In a second terminal: seed dev users and API keys
 docker compose exec app python scripts/seed.py
 
 # 5. Open Swagger UI in browser
 Start-Process "http://localhost:8000/docs"
 ```
+![Docker containers running](screenshots/Screenshot_Docker-containers-running.png)
 
-> **Note:** If you see `the attribute version is obsolete` — this is a harmless Docker Compose v2 warning. Remove the `version:` line from `docker-compose.yml` to silence it.
+> **Note:** If you see `the attribute version is obsolete`: this is a harmless Docker Compose v2 warning. Remove the `version:` line from `docker-compose.yml` to silence it.
 
-### Option B — Local Python
+### Option B: Local Python
 
 Prerequisites: Python 3.12+, PostgreSQL 14+, Redis 6+
 
@@ -104,7 +105,7 @@ pip install -r requirements.txt
 
 # 3. Configure environment
 copy .env.example .env
-# Edit .env — set DATABASE_URL, REDIS_URL, SECRET_KEY, JWT_SECRET_KEY
+# Edit .env: set DATABASE_URL, REDIS_URL, SECRET_KEY, JWT_SECRET_KEY
 
 # 4. Create the PostgreSQL database
 psql -U postgres -c "CREATE DATABASE api_gateway;"
@@ -121,7 +122,7 @@ uvicorn app.main:app --reload --port 8000
 
 ---
 
-## Usage — Windows PowerShell
+## Usage: Windows PowerShell
 
 > PowerShell's built-in `curl` is an alias for `Invoke-WebRequest` and **does not accept** `-X`, `-H`, or `-d` flags.
 > Always use `Invoke-RestMethod` as shown below, or install real curl: `winget install curl.curl` and use `curl.exe`.
@@ -168,7 +169,7 @@ $API_KEY = $key.key
 Write-Host "API Key: $API_KEY"
 ```
 
-> The full key (starting with `gw_`) is shown once — save it. Subsequent `GET /api-keys` responses redact the key.
+> The full key (starting with `gw_`) is shown once: save it. Subsequent `GET /api-keys` responses redact the key.
 
 ### 5. Call a rate-limited gateway endpoint
 
@@ -194,26 +195,26 @@ Invoke-RestMethod -Method POST `
   -Body '{"message":"Hello from API Gateway!"}'
 ```
 
-### 7. Test rate limiting — watch the 429s kick in
+### 7. Test rate limiting: watch the 429s kick in
 
 ```powershell
 1..55 | ForEach-Object {
   try {
     $r = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/gateway/ping" `
       -Headers @{ "X-API-Key" = $API_KEY }
-    Write-Host "[$_] 200 OK — remaining: $($r.rate_limit_remaining)"
+    Write-Host "[$_] 200 OK: remaining: $($r.rate_limit_remaining)"
   } catch {
     Write-Host "[$_] 429 RATE LIMITED"
   }
 }
 ```
 
-Expected output — requests 1–50 succeed, 51–55 are rejected:
+Expected output: requests 1–50 succeed, 51–55 are rejected:
 ```
-[1]  200 OK — remaining: 49
-[2]  200 OK — remaining: 48
+[1]  200 OK: remaining: 49
+[2]  200 OK: remaining: 48
 ...
-[50] 200 OK — remaining: 0
+[50] 200 OK: remaining: 0
 [51] 429 RATE LIMITED
 [52] 429 RATE LIMITED
 [53] 429 RATE LIMITED
@@ -250,7 +251,7 @@ $TOKEN = $refresh.access_token
 
 ---
 
-## Usage — macOS / Linux
+## Usage: macOS / Linux
 
 ```bash
 # Health check
@@ -261,7 +262,7 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"Secret123"}'
 
-# Login — save the token
+# Login: save the token
 TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"Secret123"}' \
@@ -292,9 +293,9 @@ done
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/v1/auth/register` | — | Register a new user |
-| POST | `/api/v1/auth/login` | — | Login → JWT access + refresh tokens |
-| POST | `/api/v1/auth/refresh` | — | Rotate token pair |
+| POST | `/api/v1/auth/register` |: | Register a new user |
+| POST | `/api/v1/auth/login` |: | Login → JWT access + refresh tokens |
+| POST | `/api/v1/auth/refresh` |: | Rotate token pair |
 | GET | `/api/v1/users/me` | JWT | Get own profile and API keys |
 | PATCH | `/api/v1/users/me` | JWT | Update email or password |
 | DELETE | `/api/v1/users/me` | JWT | Deactivate account |
@@ -307,9 +308,9 @@ done
 | POST | `/api/v1/gateway/echo` | API Key | Rate-limited echo |
 | GET | `/api/v1/gateway/data` | API Key | Simulated data fetch |
 | GET | `/api/v1/gateway/data/{id}` | API Key | Fetch single item |
-| GET | `/health` | — | Health check |
+| GET | `/health` |: | Health check |
 
-### Rate limit exceeded — 429 response
+### Rate limit exceeded: 429 response
 
 ```json
 {
@@ -336,10 +337,10 @@ All settings are loaded from environment variables. Copy `.env.example` to `.env
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | — | PostgreSQL async URL (`postgresql+asyncpg://user:pass@host:5432/db`) |
+| `DATABASE_URL` |: | PostgreSQL async URL (`postgresql+asyncpg://user:pass@host:5432/db`) |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
-| `SECRET_KEY` | — | App secret — min 32 chars, change in production |
-| `JWT_SECRET_KEY` | — | JWT signing secret — min 32 chars, change in production |
+| `SECRET_KEY` |: | App secret: min 32 chars, change in production |
+| `JWT_SECRET_KEY` |: | JWT signing secret: min 32 chars, change in production |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access token TTL in minutes |
 | `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Refresh token TTL in days |
 | `DEFAULT_RATE_LIMIT` | `100` | Default requests per window |
@@ -357,7 +358,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ## Running Tests
 
-Tests use an in-memory SQLite database — no PostgreSQL or Redis required to run them.
+Tests use an in-memory SQLite database: no PostgreSQL or Redis required to run them.
 
 **Docker:**
 ```powershell
@@ -403,7 +404,7 @@ api_gateway/
 │   │   └── router.py            # Aggregates all routers under /api/v1
 │   ├── core/
 │   │   ├── config.py            # Pydantic-settings (reads .env)
-│   │   ├── logging.py           # Loguru — rotating file + console
+│   │   ├── logging.py           # Loguru: rotating file + console
 │   │   └── security.py          # JWT sign / verify / refresh
 │   ├── db/
 │   │   ├── session.py           # Async SQLAlchemy engine + session factory
@@ -420,7 +421,7 @@ api_gateway/
 │   │   └── auth.py              # LoginRequest / TokenResponse / RequestLogPage
 │   ├── services/
 │   │   ├── rate_limiter.py      # Sliding-window via atomic Lua script in Redis
-│   │   ├── user_service.py      # User CRUD — uses bcrypt directly (no passlib)
+│   │   ├── user_service.py      # User CRUD: uses bcrypt directly (no passlib)
 │   │   ├── api_key_service.py   # API key CRUD + usage tracking
 │   │   └── log_service.py       # Paginated log queries
 │   └── main.py                  # App factory, lifespan, CORS, exception handlers
@@ -438,7 +439,7 @@ api_gateway/
 │   └── seed.py                  # Creates admin + regular user with API keys
 ├── Dockerfile                   # Multi-stage build (builder + runtime, non-root user)
 ├── docker-compose.yml           # app + PostgreSQL 16 + Redis 7 + one-shot migrator
-├── requirements.txt             # bcrypt 4.0.1 (passlib removed — compatibility fix)
+├── requirements.txt             # bcrypt 4.0.1 (passlib removed: compatibility fix)
 ├── alembic.ini
 ├── pytest.ini
 └── .env.example
@@ -450,7 +451,7 @@ api_gateway/
 
 ### 1. bcrypt / passlib incompatibility
 
-`passlib 1.7.4` is incompatible with `bcrypt 4.x` — it tries to read `bcrypt.__about__.__version__` which no longer exists in bcrypt 4, then crashes during an internal wrap-bug detection check.
+`passlib 1.7.4` is incompatible with `bcrypt 4.x`: it tries to read `bcrypt.__about__.__version__` which no longer exists in bcrypt 4, then crashes during an internal wrap-bug detection check.
 
 **Symptom:**
 ```
@@ -461,7 +462,7 @@ ValueError: password cannot be longer than 72 bytes
 **Fix:** `passlib` removed entirely. `bcrypt` called directly in `app/services/user_service.py`:
 
 ```python
-# requirements.txt — passlib[bcrypt]==1.7.4 replaced with:
+# requirements.txt: passlib[bcrypt]==1.7.4 replaced with:
 bcrypt==4.0.1
 
 # app/services/user_service.py
@@ -478,7 +479,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 ### 2. Middleware blocking JWT-protected routes
 
-The original `GatewayMiddleware` exempt list only included `/api/v1/auth`. All other routes — including `/api/v1/api-keys`, `/api/v1/users`, and `/api/v1/logs` — were incorrectly demanding an `X-API-Key` header, making it impossible to create API keys via JWT auth.
+The original `GatewayMiddleware` exempt list only included `/api/v1/auth`. All other routes: including `/api/v1/api-keys`, `/api/v1/users`, and `/api/v1/logs`: were incorrectly demanding an `X-API-Key` header, making it impossible to create API keys via JWT auth.
 
 **Symptom:**
 ```json
@@ -520,10 +521,10 @@ Invoke-WebRequest : A parameter cannot be found that matches parameter name 'X'.
 
 ## Design Decisions
 
-- **Fail-open rate limiter** — if Redis is temporarily unavailable, requests pass through rather than taking the service down
-- **Atomic Lua script** — the entire check-and-increment is a single Redis `EVALSHA` call, preventing race conditions under high concurrency
-- **Per-endpoint isolation** — Redis keys are `rl:{user_id}:{endpoint}`, so `/ping` and `/data` have independent windows per user
-- **Middleware logging** — request logs and usage counts are written in the same DB session as the rate limit check, saving a roundtrip
-- **Direct bcrypt** — no passlib wrapper, eliminating a class of version-compatibility failures
-- **Multi-stage Docker build** — builder stage installs gcc and compiles packages; runtime stage copies only the venv, keeping the final image ~120 MB
-- **Non-root container user** — the app runs as `appuser`, not root, reducing attack surface
+- **Fail-open rate limiter**: if Redis is temporarily unavailable, requests pass through rather than taking the service down
+- **Atomic Lua script**: the entire check-and-increment is a single Redis `EVALSHA` call, preventing race conditions under high concurrency
+- **Per-endpoint isolation**: Redis keys are `rl:{user_id}:{endpoint}`, so `/ping` and `/data` have independent windows per user
+- **Middleware logging**: request logs and usage counts are written in the same DB session as the rate limit check, saving a roundtrip
+- **Direct bcrypt**: no passlib wrapper, eliminating a class of version-compatibility failures
+- **Multi-stage Docker build**: builder stage installs gcc and compiles packages; runtime stage copies only the venv, keeping the final image ~120 MB
+- **Non-root container user**: the app runs as `appuser`, not root, reducing attack surface
